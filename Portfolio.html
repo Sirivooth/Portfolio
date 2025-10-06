@@ -1,165 +1,247 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Three.js Robot Animation with Dynamic Fog</title>
-  <style>
-    body { margin: 0; overflow: hidden; }
-    canvas { display: block; }
-  </style>
+<meta charset="UTF-8">
+<title>Interactive 3D Portfolio</title>
+<style>
+  body { margin:0; overflow:hidden; background:#000; }
+  canvas { display:block; }
+  .overlay {
+    position:absolute; top:20%; left:20%; width:60%; height:60%;
+    background:#fff; color:#000; display:none;
+    padding:20px; font-family:sans-serif; border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,0.5);
+  }
+  .overlay button { margin-top:10px; padding:5px 10px; cursor:pointer; }
+</style>
 </head>
 <body>
+
+<div id="overlay-about" class="overlay">
+  <h1>About Me</h1>
+  <p>My name is Sirivooth Theinkrua
+  <br>I am a student at Kasetsart University of Kampaeng Saen Nakhon Pathom.
+  <br>I am studying in the Faculty of Liberal Arts And Science , majoring in Computer Science.
+  </p>
+  <button onclick="closeOverlay('overlay-about')">Close</button>
+</div>
+
+<div id="overlay-contact" class="overlay">
+  <h1>Contact</h1>
+  <p>Email: example@email.com<br>Phone: 012-345-6789</p>
+  <button onclick="closeOverlay('overlay-contact')">Close</button>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/EXRLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
 
 <script>
-  // Scene
-  const scene = new THREE.Scene();
+// ---------------- Scene ----------------
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0xaaaaaa,0.015);
+let fogTime=0;
 
-  // 🎭 Fog Effect (Exponential Dynamic Fog)
-  scene.fog = new THREE.FogExp2(0xaaaaaa, 0.015);
-  let fogTime = 0;
+// ---------------- Camera ----------------
+const camera = new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,2000);
+const cameraDefaultPos = new THREE.Vector3(0,5,20);
+camera.position.copy(cameraDefaultPos);
 
-  // Camera
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(15, 10, 25);
+// ---------------- Renderer ----------------
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMappingExposure = 1.2;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
 
-  // Renderer
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMappingExposure = 1.2;
-  renderer.shadowMap.enabled = true;
-  document.body.appendChild(renderer.domElement);
+// ---------------- Controls ----------------
+const controls = new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
 
-  // Controls
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.target.set(0, 0, 0);
-  controls.update();
+// ---------------- Lights ----------------
+scene.add(new THREE.AmbientLight(0xffffff,0.2));
+const hemiLight=new THREE.HemisphereLight(0xaaaaff,0x444422,0.6); hemiLight.position.set(0,50,0); scene.add(hemiLight);
+const dirLight=new THREE.DirectionalLight(0xffffff,1.5);
+dirLight.position.set(-30,50,20); dirLight.castShadow=true;
+dirLight.shadow.mapSize.width=4096; dirLight.shadow.mapSize.height=4096;
+dirLight.shadow.camera.left=-50; dirLight.shadow.camera.right=50; dirLight.shadow.camera.top=50; dirLight.shadow.camera.bottom=-50;
+dirLight.shadow.bias=-0.0005; scene.add(dirLight);
+const spotLight=new THREE.SpotLight(0xffd27f,2.5,100,Math.PI/6,0.4,1);
+spotLight.position.set(0,25,25); spotLight.target.position.set(0,2,-10); spotLight.castShadow=true; scene.add(spotLight); scene.add(spotLight.target);
+const pointLightWarm=new THREE.PointLight(0xffaa66,0.6,50); pointLightWarm.position.set(-10,10,10); scene.add(pointLightWarm);
+const pointLightCool=new THREE.PointLight(0x66aaff,0.6,50); pointLightCool.position.set(10,10,-10); scene.add(pointLightCool);
 
-  // === Lights ===
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
-  scene.add(ambientLight);
+// ---------------- Environment ----------------
+const exrLoader=new THREE.EXRLoader();
+const pmremGenerator=new THREE.PMREMGenerator(renderer); pmremGenerator.compileEquirectangularShader();
+exrLoader.load("docklands_02_1k.exr", function(texture){
+  const envMap=pmremGenerator.fromEquirectangular(texture).texture;
+  scene.background=envMap; scene.environment=envMap; texture.dispose();
+});
 
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-  hemiLight.position.set(0, 50, 0);
-  scene.add(hemiLight);
+// ---------------- Ground ----------------
+const texLoader=new THREE.TextureLoader();
+const floorDiffuse=texLoader.load("concrete_pavers_02_diff_1k.jpg");
+const floorNormal=texLoader.load("concrete_pavers_02_nor_gl_1k.jpg");
+const floorRough=texLoader.load("concrete_pavers_02_rough_1k.jpg");
+[floorDiffuse,floorNormal,floorRough].forEach(t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(20,20);});
+const groundMat=new THREE.MeshStandardMaterial({map:floorDiffuse,normalMap:floorNormal,roughnessMap:floorRough,metalness:0,roughness:1});
+const groundGeo=new THREE.PlaneGeometry(100,100);
+const ground=new THREE.Mesh(groundGeo,groundMat); ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
 
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-  dirLight.position.set(-20, 30, -10);
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 4096;
-  dirLight.shadow.mapSize.height = 4096;
-  scene.add(dirLight);
+// ---------------- Robot ----------------
+let mixer; 
+const loaderGLTF=new THREE.GLTFLoader();
+loaderGLTF.load("https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb",function(gltf){
+    const model=gltf.scene;
+    model.traverse(n=>{if(n.isMesh){n.castShadow=true;n.receiveShadow=true;}});
+    model.position.set(0,0,0); model.scale.set(0.5,0.5,0.5); scene.add(model);
+    mixer=new THREE.AnimationMixer(model); const clips=gltf.animations;
+    const clip=THREE.AnimationClip.findByName(clips,"Dance");
+    if(clip) mixer.clipAction(clip).play();
+    else{const idle=THREE.AnimationClip.findByName(clips,"Idle"); if(idle) mixer.clipAction(idle).play();}
+});
 
-  const spotLight = new THREE.SpotLight(0xffffff, 1.5, 100, Math.PI / 6, 0.3, 1);
-  spotLight.position.set(10, 30, 10);
-  spotLight.castShadow = true;
-  spotLight.target.position.set(0, 0, 0);
-  scene.add(spotLight);
-  scene.add(spotLight.target);
+// ---------------- Name ----------------
+let nameModel;
+const nameLoader=new THREE.GLTFLoader();
+nameLoader.load("Name.glb",function(gltf){
+  nameModel=gltf.scene;
+  nameModel.traverse(n=>{if(n.isMesh){n.castShadow=true;n.receiveShadow=true; n.material=new THREE.MeshStandardMaterial({color:0xffc107,metalness:0.8,roughness:0.3,emissive:0x332200});}});
+  nameModel.position.set(0,0.02,25); nameModel.scale.set(3,3,3); scene.add(nameModel);
+});
 
-  const pointLight1 = new THREE.PointLight(0xff5555, 1, 50);
-  pointLight1.position.set(-10, 10, 0);
-  scene.add(pointLight1);
+// ---------------- Photo ----------------
+let photoMesh;
+texLoader.load("Photo.jpg",function(texture){
+    texture.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    const photoGeo=new THREE.PlaneGeometry(10,10);
+    const photoMat=new THREE.MeshStandardMaterial({map:texture,transparent:true});
+    photoMesh=new THREE.Mesh(photoGeo,photoMat);
+    photoMesh.position.set(-10,5,10); photoMesh.castShadow=true; photoMesh.receiveShadow=true;
+    scene.add(photoMesh);
+});
 
-  const pointLight2 = new THREE.PointLight(0x55aaff, 1, 50);
-  pointLight2.position.set(10, 10, 0);
-  scene.add(pointLight2);
+// ---------------- Clickable Text ----------------
+let clickableObjects=[];
+const fontLoader=new THREE.FontLoader();
+fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',function(font){
+    const texts=[
+        {name:"About Me",pos:[15,7,10],overlay:"overlay-about"},
+        {name:"Portfolio",pos:[15,10,0],overlay:null},
+        {name:"Contact",pos:[15,4,5],overlay:"overlay-contact"}
+    ];
+    texts.forEach(t=>{
+        const geo=new THREE.TextGeometry(t.name,{font:font,size:2,height:0.3,bevelEnabled:true,bevelThickness:0.05,bevelSize:0.05});
+        const mat=new THREE.MeshStandardMaterial({color:0xff00ff,metalness:0.5,roughness:0.2});
+        const mesh=new THREE.Mesh(geo,mat);
+        mesh.position.set(...t.pos);
+        mesh.userData.overlay=t.overlay;
+        mesh.name=t.name;
+        scene.add(mesh);
+        clickableObjects.push(mesh);
+    });
+});
 
-  const pointLight3 = new THREE.PointLight(0xffffff, 0.8, 60);
-  pointLight3.position.set(0, 15, -15);
-  scene.add(pointLight3);
-
-  // Load EXR background (HDRI)
-  const exrLoader = new THREE.EXRLoader();
-  exrLoader.load("docklands_02_1k.exr", function(texture) {
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-    scene.background = envMap;
-    scene.environment = envMap;
-    texture.dispose();
-  });
-
-  // === Ground (30x30) ===
-  const textureLoader = new THREE.TextureLoader();
-  const floorDiffuse = textureLoader.load("concrete_pavers_02_diff_1k.jpg");
-  const floorNormal  = textureLoader.load("concrete_pavers_02_nor_gl_1k.jpg");
-  const floorRough   = textureLoader.load("concrete_pavers_02_rough_1k.jpg");
-
-  [floorDiffuse, floorNormal, floorRough].forEach(tex => {
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(6, 6); // tile ให้พอดีกับพื้นใหญ่ขึ้น
-  });
-
-  const groundMat = new THREE.MeshStandardMaterial({
-    map: floorDiffuse,
-    normalMap: floorNormal,
-    roughnessMap: floorRough,
-    metalness: 0.0,
-    roughness: 1.0
-  });
-
-  const groundGeo = new THREE.PlaneGeometry(30, 30); // พื้นขนาด 30x30
-  const ground = new THREE.Mesh(groundGeo, groundMat);
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  // --- โหลดโมเดลหุ่นยนต์ + Animation ---
-  let mixer;
-  const loader = new THREE.GLTFLoader();
-  loader.load(
-    "https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb",
-    function(gltf) {
-      const model = gltf.scene;
-      model.traverse(node => {
-        if (node.isMesh) {
-          node.castShadow = true;
-          node.receiveShadow = true;
+// ---------------- Raycaster ----------------
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+let hoveredObject=null;
+function onMouseMove(event){
+    mouse.x=(event.clientX/window.innerWidth)*2-1;
+    mouse.y=-(event.clientY/window.innerHeight)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    const intersects=raycaster.intersectObjects(clickableObjects);
+    if(intersects.length>0){
+        if(hoveredObject!=intersects[0].object){
+            if(hoveredObject) hoveredObject.material.color.set(0xff00ff);
+            hoveredObject=intersects[0].object;
+            hoveredObject.material.color.set(0xffff00);
         }
-      });
-      model.position.set(0, 0, 0);
-      model.scale.set(0.5, 0.5, 0.5);
-      scene.add(model);
-
-      mixer = new THREE.AnimationMixer(model);
-      const clips = gltf.animations;
-      const clip = THREE.AnimationClip.findByName(clips, "Dance");
-      if (clip) {
-        mixer.clipAction(clip).play();
-      } else {
-        const idle = THREE.AnimationClip.findByName(clips, "Idle");
-        if (idle) mixer.clipAction(idle).play();
-      }
+    } else {
+        if(hoveredObject) hoveredObject.material.color.set(0xff00ff);
+        hoveredObject=null;
     }
-  );
+}
+window.addEventListener('mousemove',onMouseMove);
 
-  // Animate
-  const clock = new THREE.Clock();
-  function animate() {
+// ---------------- Overlay Close ----------------
+function closeOverlay(id){
+    document.getElementById(id).style.display='none';
+    // กล้องกลับตำแหน่งเริ่มต้น
+    gsap.to(camera.position,{x:cameraDefaultPos.x,y:cameraDefaultPos.y,z:cameraDefaultPos.z,duration:2,onUpdate:()=>{camera.lookAt(0,0,0); controls.update();}});
+}
+
+// ---------------- Mouse Click ----------------
+function onMouseClick(event){
+    if(hoveredObject){
+        gsap.to(hoveredObject.position,{y:hoveredObject.position.y-0.3,duration:0.1,yoyo:true,repeat:1});
+
+        let targetPos, lookAtTarget;
+
+        if(hoveredObject.userData.overlay && photoMesh){
+            targetPos = photoMesh.position.clone().add(new THREE.Vector3(5,3,10));
+            lookAtTarget = photoMesh.position.clone();
+            document.getElementById(hoveredObject.userData.overlay).style.display='block';
+        } else if(hoveredObject.name === "Portfolio") {
+            targetPos = new THREE.Vector3(20, 15, 30);
+            lookAtTarget = new THREE.Vector3(0,5,10);
+        } else {
+            targetPos = cameraDefaultPos.clone();
+            lookAtTarget = new THREE.Vector3(0,0,0);
+        }
+
+        gsap.to(camera.position, {
+            x: targetPos.x,
+            y: targetPos.y,
+            z: targetPos.z,
+            duration: 2,
+            ease: "power2.inOut",
+            onUpdate: () => { camera.lookAt(lookAtTarget); controls.update(); }
+        });
+    }
+}
+window.addEventListener('click',onMouseClick);
+
+// ---------------- Animate ----------------
+const clock=new THREE.Clock();
+function animate(){
     requestAnimationFrame(animate);
-    const delta = clock.getDelta();
-    if (mixer) mixer.update(delta);
+    const delta=clock.getDelta();
+    if(mixer) mixer.update(delta);
 
-    // Dynamic Fog
-    fogTime += delta * 0.5; 
-    scene.fog.density = 0.012 + Math.sin(fogTime) * 0.004;
+    fogTime+=delta*0.5;
+    scene.fog.density=0.012+Math.sin(fogTime)*0.004;
+
+    if(nameModel){const elapsed=clock.getElapsedTime();
+        nameModel.position.y=0.02+Math.sin(elapsed*2)*0.25;
+        nameModel.position.x=Math.sin(elapsed*1)*0.5;}
+    if(photoMesh){const elapsed=clock.getElapsedTime();
+        photoMesh.position.y=5+Math.sin(elapsed*1.5)*0.5;
+        photoMesh.position.x=-10+Math.sin(elapsed*0.7)*0.7;}
+
+    clickableObjects.forEach(obj=>{
+        const t=clock.getElapsedTime();
+        obj.position.y += Math.sin(t)*0.001;
+    });
 
     controls.update();
-    renderer.render(scene, camera);
-  }
-  animate();
+    renderer.render(scene,camera);
+}
+animate();
 
-  // Resize
-  window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+// ---------------- Resize ----------------
+window.addEventListener('resize',()=>{
+    camera.aspect=window.innerWidth/window.innerHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+    renderer.setSize(window.innerWidth,window.innerHeight);
+});
 </script>
 </body>
 </html>
