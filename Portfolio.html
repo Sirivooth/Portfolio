@@ -141,7 +141,7 @@ scene.add(ground);
 
 // City Model
 const cityLoader = new THREE.GLTFLoader();
-cityLoader.load("desert_town.glb.circ", function(gltf) {
+cityLoader.load("desert_town.glb", function(gltf) {
     const city = gltf.scene;
     city.traverse(n => { if(n.isMesh){ n.castShadow=true; n.receiveShadow=true; } });
     city.position.set(0,1.5,-60);
@@ -492,3 +492,4 @@ function cameraTour() {
 </script>
 </body>
 </html>
+
