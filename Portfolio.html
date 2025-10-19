@@ -141,7 +141,7 @@ scene.add(ground);
 
 // City Model
 const cityLoader = new THREE.GLTFLoader();
-cityLoader.load("desert_town.glb", function(gltf) {
+cityLoader.load("futuristic_city.glb", function(gltf) {
     const city = gltf.scene;
     city.traverse(n => { if(n.isMesh){ n.castShadow=true; n.receiveShadow=true; } });
     city.position.set(0,1.5,-60);
@@ -156,7 +156,7 @@ let cakeModels = []; // เก็บโมเดลเค้กทั้งห�
 // Loader1
 const loader1 = new THREE.GLTFLoader();
 loader1.load(
-  'handpainted_watercolor_cake.glb.circ',
+  'robot_conpernicus.glb',
   function (gltf) {
     const model = gltf.scene;
 
@@ -207,7 +207,7 @@ loader1.load(
 // Loader2
 const loader2 = new THREE.GLTFLoader();
 loader2.load(
-  'cake_with_cherry.glb.circ',
+  'biped_robot.glb',
   function (gltf) {
     const model = gltf.scene;
     model.traverse(n => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
@@ -223,7 +223,7 @@ loader2.load(
 // Loader3
 const loader3 = new THREE.GLTFLoader();
 loader3.load(
-  'roll_cake.glb.circ',
+  'combat_steampunk_robot.glb',
   function (gltf) {
     const model = gltf.scene;
     model.traverse(n => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
@@ -492,4 +492,3 @@ function cameraTour() {
 </script>
 </body>
 </html>
-
